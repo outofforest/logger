@@ -1,4 +1,4 @@
-module github.com/wojciech-malota-wojcik/logger
+module github.com/outofforest/logger
 
 go 1.16
 
