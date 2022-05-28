@@ -13,7 +13,6 @@ type logFiedType int
 const logField logFiedType = iota
 
 var mu sync.Mutex
-var verbose = true
 
 // EncoderConfig is the config of log encoder
 var EncoderConfig = zapcore.EncoderConfig{
@@ -32,14 +31,17 @@ var EncoderConfig = zapcore.EncoderConfig{
 }
 
 // New creates new logger
-func New() *zap.Logger {
+func New(config Config) *zap.Logger {
 	cfg := zap.Config{
-		Level:            zap.NewAtomicLevelAt(zap.DebugLevel),
+		Level:            zap.NewAtomicLevelAt(zap.InfoLevel),
 		Development:      true,
-		Encoding:         "console",
+		Encoding:         string(config.Format),
 		EncoderConfig:    EncoderConfig,
 		OutputPaths:      []string{"stderr"},
 		ErrorOutputPaths: []string{"stderr"},
+	}
+	if config.Verbose {
+		cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	}
 
 	log, err := cfg.Build()
@@ -59,22 +61,10 @@ func Get(ctx context.Context) *zap.Logger {
 	mu.Lock()
 	defer mu.Unlock()
 
-	var log = ctx.Value(logField).(*zap.Logger)
-	if !verbose {
-		log = log.WithOptions(zap.IncreaseLevel(zapcore.InfoLevel))
-	}
-	return log
+	return ctx.Value(logField).(*zap.Logger)
 }
 
 // WithLogger adds existing logger to context
 func WithLogger(ctx context.Context, logger *zap.Logger) context.Context {
 	return context.WithValue(ctx, logField, logger)
-}
-
-// VerboseOff turns off verbose logging
-func VerboseOff() {
-	mu.Lock()
-	defer mu.Unlock()
-
-	verbose = false
 }
