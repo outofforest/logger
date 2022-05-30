@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ridge/must"
 	"github.com/spf13/pflag"
 )
 
@@ -44,14 +45,14 @@ func ConfigureWithCLI(defaultConfig Config) Config {
 	var format string
 	flags := pflag.NewFlagSet("logger", pflag.ContinueOnError)
 	flags.ParseErrorsWhitelist.UnknownFlags = true
-	flags.StringVar(&format, "log-format", string(defaultConfig.Format), "Format of log output: console | json")
-	flags.BoolVarP(&defaultConfig.Verbose, "verbose", "v", defaultConfig.Verbose, "Turns on verbose logging")
+	AddFlags(defaultConfig, flags)
 	// Dummy flag to turn off printing usage of this flag set
 	flags.BoolP("help", "h", false, "")
 
 	_ = flags.Parse(os.Args[1:])
 
-	defaultConfig.Format = Format(format)
+	defaultConfig.Format = Format(must.String(flags.GetString("log-format")))
+	defaultConfig.Verbose = must.Bool(flags.GetBool("verbose"))
 	if defaultConfig.Format != FormatConsole && defaultConfig.Format != FormatJSON {
 		panic(fmt.Errorf("incorrect logging format %s", format))
 	}
@@ -59,9 +60,15 @@ func ConfigureWithCLI(defaultConfig Config) Config {
 	return defaultConfig
 }
 
-// AddDummyFlags adds dummy flags defined by logger so your application does not complain about undefined flags
-// and help includes logging-specific options
-func AddDummyFlags(defaultConfig Config, flags *pflag.FlagSet) {
+// Flags returns new flag set preconfigured with logger-specific options
+func Flags(defaultConfig Config, name string) *pflag.FlagSet {
+	flags := pflag.NewFlagSet(name, pflag.ContinueOnError)
+	AddFlags(defaultConfig, flags)
+	return flags
+}
+
+// AddFlags adds flags defined by logger
+func AddFlags(defaultConfig Config, flags *pflag.FlagSet) {
 	flags.String("log-format", string(defaultConfig.Format), "Format of log output: console | json")
 	flags.BoolP("verbose", "v", defaultConfig.Verbose, "Turns on verbose logging")
 }
