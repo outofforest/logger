@@ -394,7 +394,7 @@ func (c *console) AppendReflected(value interface{}) error {
 	case reflect.String:
 		c.AppendString(v.String())
 	default:
-		return fmt.Errorf("unable to serialize %s", v.Kind())
+		return errors.Errorf("unable to serialize %s", v.Kind())
 	}
 	return nil
 }

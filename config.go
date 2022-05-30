@@ -1,9 +1,9 @@
 package logger
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/ridge/must"
 	"github.com/spf13/pflag"
 )
@@ -54,7 +54,7 @@ func ConfigureWithCLI(defaultConfig Config) Config {
 	defaultConfig.Format = Format(must.String(flags.GetString("log-format")))
 	defaultConfig.Verbose = must.Bool(flags.GetBool("verbose"))
 	if defaultConfig.Format != FormatConsole && defaultConfig.Format != FormatJSON {
-		panic(fmt.Errorf("incorrect logging format %s", format))
+		panic(errors.Errorf("incorrect logging format %s", format))
 	}
 
 	return defaultConfig
