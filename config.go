@@ -12,11 +12,14 @@ import (
 type Format string
 
 const (
-	// FormatConsole causes logs to be printed in human-readable form
+	// FormatConsole causes logs to be printed in console format delivered by zap
 	FormatConsole Format = "console"
 
-	// FormatJSON causes logs to be printed in JSON
+	// FormatJSON causes logs to be printed in JSON format delivered by zap
 	FormatJSON Format = "json"
+
+	// FormatYAML causes logs to be printed in YAML
+	FormatYAML Format = "yaml"
 )
 
 // Config stores configuration of the logger
@@ -30,7 +33,7 @@ type Config struct {
 
 // ToolDefaultConfig stores handy default configuration used by tools run manually by humans
 var ToolDefaultConfig = Config{
-	Format:  FormatConsole,
+	Format:  FormatYAML,
 	Verbose: false,
 }
 
@@ -40,9 +43,14 @@ var ServiceDefaultConfig = Config{
 	Verbose: true,
 }
 
+var validFormats = map[Format]bool{
+	FormatConsole: true,
+	FormatJSON:    true,
+	FormatYAML:    true,
+}
+
 // ConfigureWithCLI configures logger based on CLI flags
 func ConfigureWithCLI(defaultConfig Config) Config {
-	var format string
 	flags := pflag.NewFlagSet("logger", pflag.ContinueOnError)
 	flags.ParseErrorsWhitelist.UnknownFlags = true
 	AddFlags(defaultConfig, flags)
@@ -53,8 +61,8 @@ func ConfigureWithCLI(defaultConfig Config) Config {
 
 	defaultConfig.Format = Format(must.String(flags.GetString("log-format")))
 	defaultConfig.Verbose = must.Bool(flags.GetBool("verbose"))
-	if defaultConfig.Format != FormatConsole && defaultConfig.Format != FormatJSON {
-		panic(errors.Errorf("incorrect logging format %s", format))
+	if !validFormats[defaultConfig.Format] {
+		panic(errors.Errorf("incorrect logging format %s", defaultConfig.Format))
 	}
 
 	return defaultConfig

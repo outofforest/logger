@@ -1,6 +1,7 @@
 package logger
 
 import (
+	stderr "errors"
 	"testing"
 	"time"
 
@@ -51,7 +52,7 @@ func TestPrint(t *testing.T) {
 	log := New(config).Named("loggerName").
 		With(zap.String("withField1", "value1"),
 			zap.Int("withField2", 2))
-	log.Error("This is error",
+	log.Error("This is error, it contains error field with stack, so log stack trace should not be generated",
 		zap.Array("array", array{0, 1, 2, 3, 4}),
 		zap.Any("any", object{Field1: "stringValue", Field2: 3}),
 		zap.Any("nil", nil),
@@ -72,11 +73,16 @@ func TestPrint(t *testing.T) {
 		zap.Time("time", time.Now()),
 	)
 
-	log.Named("logger2").With(zap.String("withField3", "value3")).Info("This is message",
-		zap.String("string2", "value2"))
+	log.Named("logger2").With(zap.String("withField3", "value3")).Info("This is info message, error stack should not be printed",
+		zap.String("string2", "value2"), zap.Error(errors.New("this is error")))
 
 	log.Named("logger2").Info("This is message",
-		zap.Namespace("namespace"),
+		zap.Namespace("namespace1"),
 		zap.String("string1", "value1"),
-		zap.String("string2", "value2"))
+		zap.String("string2", "value2"),
+		zap.Namespace("namespace2"),
+		zap.Object("object3", object2{Field1: "stringValueLine1\nstringValueLine2\nstringValueLine3", Field2: 56}))
+
+	log.Error("This is error without error field, it should contain stack trace")
+	log.Error("This is error with error not containing stack trace so stack trace of log should be printed", zap.Error(stderr.New("error without stack trace")))
 }
