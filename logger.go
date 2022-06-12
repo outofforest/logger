@@ -30,19 +30,12 @@ var EncoderConfig = zapcore.EncoderConfig{
 	EncodeCaller:   zapcore.ShortCallerEncoder,
 }
 
-func formatToEncoding(format Format) string {
-	if format == FormatConsole {
-		return encoderName
-	}
-	return string(format)
-}
-
 // New creates new logger
 func New(config Config) *zap.Logger {
 	cfg := zap.Config{
 		Level:            zap.NewAtomicLevelAt(zap.InfoLevel),
 		Development:      true,
-		Encoding:         formatToEncoding(config.Format),
+		Encoding:         string(config.Format),
 		EncoderConfig:    EncoderConfig,
 		OutputPaths:      []string{"stderr"},
 		ErrorOutputPaths: []string{"stderr"},
