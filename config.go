@@ -31,16 +31,10 @@ type Config struct {
 	Verbose bool
 }
 
-// ToolDefaultConfig stores handy default configuration used by tools run manually by humans
-var ToolDefaultConfig = Config{
+// DefaultConfig stores handy default configuration
+var DefaultConfig = Config{
 	Format:  FormatYAML,
 	Verbose: false,
-}
-
-// ServiceDefaultConfig stores handy default configuration used by services
-var ServiceDefaultConfig = Config{
-	Format:  FormatJSON,
-	Verbose: true,
 }
 
 var validFormats = map[Format]bool{

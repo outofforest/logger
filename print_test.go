@@ -48,7 +48,7 @@ func (o object3) MarshalLogObject(marshaler zapcore.ObjectEncoder) error {
 }
 
 func TestPrint(t *testing.T) {
-	config := ToolDefaultConfig
+	config := DefaultConfig
 	log := New(config).Named("loggerName").
 		With(zap.String("withField1", "value1"),
 			zap.Int("withField2", 2))
