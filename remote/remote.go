@@ -243,12 +243,7 @@ loop:
 					return errors.WithStack(err)
 				}
 
-				switch resp.StatusCode {
-				case http.StatusBadRequest:
-					log.Error("Received Bad Request response from loki", zap.ByteString("body", body))
-				default:
-					return errors.Errorf("unexpected response from loki endpoint, code: %d, body: %s", resp.StatusCode, body)
-				}
+				return errors.Errorf("unexpected response from loki endpoint, code: %d, body: %s", resp.StatusCode, body)
 			}
 
 			return nil
@@ -257,6 +252,8 @@ loop:
 		if err == nil {
 			return nil
 		}
+
+		log.Error("Received error from Loki", zap.Error(err))
 
 		select {
 		case <-ctx.Done():
