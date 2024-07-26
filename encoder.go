@@ -434,8 +434,13 @@ func (c *console) AppendReflected(value interface{}) error {
 			return c.AppendReflected(v.Elem().Interface())
 		}
 	case reflect.Struct:
-		c.buffer.AppendByte('\n')
-		return c.appendReflectedStruct(v)
+		switch v.Type() {
+		case reflect.TypeOf(time.Time{}):
+			c.AppendTime(v.Interface().(time.Time))
+		default:
+			c.buffer.AppendByte('\n')
+			return c.appendReflectedStruct(v)
+		}
 	case reflect.String:
 		c.AppendString(v.String())
 	default:

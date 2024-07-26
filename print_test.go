@@ -21,7 +21,8 @@ func (a array) MarshalLogArray(marshaler zapcore.ArrayEncoder) error {
 
 type object struct {
 	Field1 string
-	Field2 int
+	Field2 time.Time
+	Field3 int
 }
 
 type object2 struct {
@@ -54,7 +55,7 @@ func TestPrint(t *testing.T) {
 			zap.Int("withField2", 2))
 	log.Error("This is error, it contains error field with stack, so log stack trace should not be generated",
 		zap.Array("array", array{0, 1, 2, 3, 4}),
-		zap.Any("any", object{Field1: "stringValue", Field2: 3}),
+		zap.Any("any", object{Field1: "stringValue", Field2: time.Now(), Field3: 3}),
 		zap.Any("nil", nil),
 		zap.Bool("bool", false),
 		zap.Bools("bools", []bool{true, false, true}),
