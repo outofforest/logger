@@ -3,6 +3,7 @@ package remote
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -29,9 +30,9 @@ const (
 // to the remote loki endpoint.
 //
 // The caller must call the returned cleanup function after using the logger.
-func WithRemote(ctx context.Context, lokiAddr string) (context.Context, parallel.Task) {
+func WithRemote(ctx context.Context, config Config) (context.Context, parallel.Task) {
 	conn := &lokiConn{
-		lokiAddr: lokiAddr,
+		config:   config,
 		buffer:   make(chan interface{}, 1000),
 		lastTime: time.Now().UnixNano(),
 		batch:    make(chan []byte, batchSize),
@@ -49,7 +50,7 @@ func WithRemote(ctx context.Context, lokiAddr string) (context.Context, parallel
 }
 
 type lokiConn struct {
-	lokiAddr string
+	config   Config
 	buffer   chan interface{}
 	lastTime int64
 	batch    chan []byte
@@ -224,8 +225,11 @@ loop:
 			reqCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()
 
-			req := must.HTTPRequest(http.NewRequestWithContext(reqCtx, http.MethodPost, lc.lokiAddr+"/loki/api/v1/push", bytes.NewReader(must.Bytes(json.Marshal(map[string]any{"streams": streams})))))
+			req := must.HTTPRequest(http.NewRequestWithContext(reqCtx, http.MethodPost, lc.config.URL+"/loki/api/v1/push", bytes.NewReader(must.Bytes(json.Marshal(map[string]any{"streams": streams})))))
 			req.Header.Set("Content-Type", "application/json")
+			if lc.config.User != "" {
+				req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(lc.config.User+":"+lc.config.Password)))
+			}
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
