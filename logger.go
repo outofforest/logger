@@ -2,7 +2,6 @@ package logger
 
 import (
 	"context"
-	"sync"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -11,8 +10,6 @@ import (
 type logFiedType int
 
 const logField logFiedType = iota
-
-var mu sync.Mutex
 
 // EncoderConfig is the config of log encoder.
 var EncoderConfig = zapcore.EncoderConfig{
@@ -58,10 +55,11 @@ func With(ctx context.Context, fields ...zap.Field) context.Context {
 
 // Get gets logger from context.
 func Get(ctx context.Context) *zap.Logger {
-	mu.Lock()
-	defer mu.Unlock()
-
-	return ctx.Value(logField).(*zap.Logger)
+	log := ctx.Value(logField)
+	if log == nil {
+		return nil
+	}
+	return log.(*zap.Logger)
 }
 
 // WithLogger adds existing logger to context.
