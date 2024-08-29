@@ -14,7 +14,7 @@ const logField logFiedType = iota
 
 var mu sync.Mutex
 
-// EncoderConfig is the config of log encoder
+// EncoderConfig is the config of log encoder.
 var EncoderConfig = zapcore.EncoderConfig{
 	TimeKey:        "ts",
 	LevelKey:       "level",
@@ -30,7 +30,7 @@ var EncoderConfig = zapcore.EncoderConfig{
 	EncodeCaller:   zapcore.ShortCallerEncoder,
 }
 
-// New creates new logger
+// New creates new logger.
 func New(config Config) *zap.Logger {
 	cfg := zap.Config{
 		Level:            zap.NewAtomicLevelAt(zap.InfoLevel),
@@ -51,12 +51,12 @@ func New(config Config) *zap.Logger {
 	return log
 }
 
-// With adds new logger to context
+// With adds new logger to context.
 func With(ctx context.Context, fields ...zap.Field) context.Context {
 	return context.WithValue(ctx, logField, Get(ctx).With(fields...))
 }
 
-// Get gets logger from context
+// Get gets logger from context.
 func Get(ctx context.Context) *zap.Logger {
 	mu.Lock()
 	defer mu.Unlock()
@@ -64,7 +64,7 @@ func Get(ctx context.Context) *zap.Logger {
 	return ctx.Value(logField).(*zap.Logger)
 }
 
-// WithLogger adds existing logger to context
+// WithLogger adds existing logger to context.
 func WithLogger(ctx context.Context, logger *zap.Logger) context.Context {
 	return context.WithValue(ctx, logField, logger)
 }

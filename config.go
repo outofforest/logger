@@ -4,34 +4,34 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-	"github.com/ridge/must"
+	"github.com/samber/lo"
 	"github.com/spf13/pflag"
 )
 
-// Format defines the format of log output
+// Format defines the format of log output.
 type Format string
 
 const (
-	// FormatConsole causes logs to be printed in console format delivered by zap
+	// FormatConsole causes logs to be printed in console format delivered by zap.
 	FormatConsole Format = "console"
 
-	// FormatJSON causes logs to be printed in JSON format delivered by zap
+	// FormatJSON causes logs to be printed in JSON format delivered by zap.
 	FormatJSON Format = "json"
 
-	// FormatYAML causes logs to be printed in YAML
+	// FormatYAML causes logs to be printed in YAML.
 	FormatYAML Format = "yaml"
 )
 
-// Config stores configuration of the logger
+// Config stores configuration of the logger.
 type Config struct {
-	// Format defines the format of log output
+	// Format defines the format of log output.
 	Format Format
 
-	// Verbose turns on verbose logging
+	// Verbose turns on verbose logging.
 	Verbose bool
 }
 
-// DefaultConfig stores handy default configuration
+// DefaultConfig stores handy default configuration.
 var DefaultConfig = Config{
 	Format:  FormatYAML,
 	Verbose: false,
@@ -43,7 +43,7 @@ var validFormats = map[Format]bool{
 	FormatYAML:    true,
 }
 
-// ConfigureWithCLI configures logger based on CLI flags
+// ConfigureWithCLI configures logger based on CLI flags.
 func ConfigureWithCLI(defaultConfig Config) Config {
 	flags := pflag.NewFlagSet("logger", pflag.ContinueOnError)
 	flags.ParseErrorsWhitelist.UnknownFlags = true
@@ -53,8 +53,8 @@ func ConfigureWithCLI(defaultConfig Config) Config {
 
 	_ = flags.Parse(os.Args[1:])
 
-	defaultConfig.Format = Format(must.String(flags.GetString("log-format")))
-	defaultConfig.Verbose = must.Bool(flags.GetBool("verbose"))
+	defaultConfig.Format = Format(lo.Must(flags.GetString("log-format")))
+	defaultConfig.Verbose = lo.Must(flags.GetBool("verbose"))
 	if !validFormats[defaultConfig.Format] {
 		panic(errors.Errorf("incorrect logging format %s", defaultConfig.Format))
 	}
@@ -62,14 +62,14 @@ func ConfigureWithCLI(defaultConfig Config) Config {
 	return defaultConfig
 }
 
-// Flags returns new flag set preconfigured with logger-specific options
+// Flags returns new flag set preconfigured with logger-specific options.
 func Flags(defaultConfig Config, name string) *pflag.FlagSet {
 	flags := pflag.NewFlagSet(name, pflag.ContinueOnError)
 	AddFlags(defaultConfig, flags)
 	return flags
 }
 
-// AddFlags adds flags defined by logger
+// AddFlags adds flags defined by logger.
 func AddFlags(defaultConfig Config, flags *pflag.FlagSet) {
 	flags.String("log-format", string(defaultConfig.Format), "Format of log output: console | json")
 	flags.BoolP("verbose", "v", defaultConfig.Verbose, "Turns on verbose logging")

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/ridge/must"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
@@ -17,7 +17,7 @@ import (
 var bufPool = buffer.NewPool()
 
 func init() {
-	must.OK(zap.RegisterEncoder(string(FormatYAML), func(config zapcore.EncoderConfig) (zapcore.Encoder, error) {
+	lo.Must0(zap.RegisterEncoder(string(FormatYAML), func(config zapcore.EncoderConfig) (zapcore.Encoder, error) {
 		return newConsoleEncoder(0), nil
 	}))
 }
@@ -190,7 +190,7 @@ func (c *console) OpenNamespace(key string) {
 
 func (c *console) Clone() zapcore.Encoder {
 	buf := bufPool.Get()
-	must.Any(buf.Write(c.buffer.Bytes()))
+	lo.Must(buf.Write(c.buffer.Bytes()))
 	return &console{
 		nested:              c.nested,
 		array:               c.array,
@@ -212,7 +212,7 @@ func (c *console) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*buf
 	buf.AppendString("\"\n  details:\n")
 
 	if c.buffer.Len() > 0 {
-		must.Any(buf.Write(c.buffer.Bytes()))
+		lo.Must(buf.Write(c.buffer.Bytes()))
 	}
 
 	subEncoder := newConsoleEncoder(0)
@@ -226,7 +226,7 @@ func (c *console) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*buf
 		}
 	}
 
-	must.Any(buf.Write(subEncoder.buffer.Bytes()))
+	lo.Must(buf.Write(subEncoder.buffer.Bytes()))
 
 	buf.AppendString("    logged:\n")
 	if entry.LoggerName != "" {
@@ -374,7 +374,7 @@ func (c *console) AppendArray(marshaler zapcore.ArrayMarshaler) error {
 	}
 
 	c.addComma()
-	must.Any(c.buffer.Write(subEncoder.buffer.Bytes()))
+	lo.Must(c.buffer.Write(subEncoder.buffer.Bytes()))
 	return nil
 }
 
@@ -391,7 +391,7 @@ func (c *console) AppendObject(marshaler zapcore.ObjectMarshaler) error {
 	}
 
 	c.addComma()
-	must.Any(c.buffer.Write(subEncoder.buffer.Bytes()))
+	lo.Must(c.buffer.Write(subEncoder.buffer.Bytes()))
 	return nil
 }
 
@@ -451,7 +451,7 @@ func (c *console) AppendReflected(value interface{}) error {
 
 func (c *console) indentation() string {
 	var res string
-	for i := 0; i < c.nested; i++ {
+	for range c.nested {
 		res += "  "
 	}
 	return res
@@ -479,6 +479,7 @@ func (c *console) appendNil() {
 }
 
 func (c *console) appendError(field zapcore.Field) bool {
+	//nolint:nestif
 	if field.Type == zapcore.ErrorType {
 		c.addKey(field.Key)
 
@@ -499,7 +500,7 @@ func (c *console) appendError(field zapcore.Field) bool {
 					for _, frame := range stack {
 						c.buffer.AppendString(ind)
 						c.buffer.AppendString("      - \"")
-						c.buffer.AppendString(string(must.Bytes(frame.MarshalText())))
+						c.buffer.AppendString(string(lo.Must(frame.MarshalText())))
 						c.buffer.AppendByte('"')
 					}
 					c.buffer.AppendByte('\n')
@@ -525,8 +526,7 @@ func (c *console) appendComplex128(value complex128) {
 
 func (c *console) appendReflectedSequence(v reflect.Value) error {
 	return c.AppendArray(zapcore.ArrayMarshalerFunc(func(enc zapcore.ArrayEncoder) error {
-		n := v.Len()
-		for i := 0; i < n; i++ {
+		for i := range v.Len() {
 			if err := enc.AppendReflected(v.Index(i).Interface()); err != nil {
 				return err
 			}
@@ -550,8 +550,7 @@ func (c *console) appendReflectedMapping(v reflect.Value) error {
 func (c *console) appendReflectedStruct(v reflect.Value) error {
 	return c.AppendObject(zapcore.ObjectMarshalerFunc(func(enc zapcore.ObjectEncoder) error {
 		t := v.Type()
-		n := t.NumField()
-		for i := 0; i < n; i++ {
+		for i := range t.NumField() {
 			f := t.Field(i)
 			if !f.IsExported() {
 				continue
