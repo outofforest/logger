@@ -11,13 +11,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/outofforest/parallel"
 	"github.com/pkg/errors"
-	"github.com/ridge/must"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/outofforest/logger"
+	"github.com/outofforest/parallel"
 )
 
 const (
@@ -39,7 +39,8 @@ func WithRemote(ctx context.Context, config Config) (context.Context, parallel.T
 		syncs:    make(chan chan struct{}, batchSize),
 	}
 
-	remoteCore := zapcore.NewCore(zapcore.NewJSONEncoder(logger.EncoderConfig), conn, zap.NewAtomicLevelAt(zap.DebugLevel))
+	remoteCore := zapcore.NewCore(zapcore.NewJSONEncoder(logger.EncoderConfig), conn,
+		zap.NewAtomicLevelAt(zap.DebugLevel))
 
 	log := logger.Get(ctx)
 	log = log.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
@@ -153,10 +154,9 @@ loop:
 		select {
 		case rawItem := <-lc.batch:
 			data := map[string]any{}
-			must.OK(json.Unmarshal(rawItem, &data))
+			lo.Must0(json.Unmarshal(rawItem, &data))
 
-			tsParsed, err := time.Parse(time.RFC3339Nano, data[logger.EncoderConfig.TimeKey].(string))
-			must.OK(err)
+			tsParsed := lo.Must(time.Parse(time.RFC3339Nano, data[logger.EncoderConfig.TimeKey].(string)))
 			ts := tsParsed.UnixNano()
 			if lc.lastTime > ts {
 				ts = lc.lastTime
@@ -182,14 +182,13 @@ loop:
 
 			items[key] = append(items[key], logItem{
 				Time: ts,
-				Data: must.Bytes(json.Marshal(data)),
+				Data: lo.Must(json.Marshal(data)),
 			})
 		default:
 			break loop
 		}
 	}
 	for _, is := range items {
-		is := is
 		sort.Slice(is, func(i, j int) bool {
 			return is[i].Time < is[j].Time
 		})
@@ -204,6 +203,7 @@ loop:
 	for k, is := range items {
 		values := make([]any, 0, len(is))
 		for _, item := range is {
+			//nolint:asasalint
 			values = append(values, []any{
 				strconv.FormatInt(item.Time, 10),
 				string(item.Data),
@@ -225,10 +225,13 @@ loop:
 			reqCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()
 
-			req := must.HTTPRequest(http.NewRequestWithContext(reqCtx, http.MethodPost, lc.config.URL+"/loki/api/v1/push", bytes.NewReader(must.Bytes(json.Marshal(map[string]any{"streams": streams})))))
+			req := lo.Must(http.NewRequestWithContext(reqCtx, http.MethodPost,
+				lc.config.URL+"/loki/api/v1/push",
+				bytes.NewReader(lo.Must(json.Marshal(map[string]any{"streams": streams})))))
 			req.Header.Set("Content-Type", "application/json")
 			if lc.config.User != "" {
-				req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(lc.config.User+":"+lc.config.Password)))
+				req.Header.Set("Authorization",
+					"Basic "+base64.StdEncoding.EncodeToString([]byte(lc.config.User+":"+lc.config.Password)))
 			}
 
 			resp, err := http.DefaultClient.Do(req)
@@ -243,7 +246,8 @@ loop:
 					return errors.WithStack(err)
 				}
 
-				return errors.Errorf("unexpected response from loki endpoint, code: %d, body: %s", resp.StatusCode, body)
+				return errors.Errorf("unexpected response from loki endpoint, code: %d, body: %s",
+					resp.StatusCode, body)
 			}
 
 			return nil

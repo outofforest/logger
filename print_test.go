@@ -68,14 +68,16 @@ func TestPrint(t *testing.T) {
 		zap.Float32("float32", 12.34),
 		zap.Float64("float64", 12.34),
 		zap.Int("int", 8),
-		zap.Object("object", object3{Field1: "stringValue1\nstringValue2", Field2: 56, Nested: object2{Field1: "stringValueLine1\nstringValueLine2\nstringValueLine3", Field2: 56}}),
+		zap.Object("object", object3{Field1: "stringValue1\nstringValue2", Field2: 56,
+			Nested: object2{Field1: "stringValueLine1\nstringValueLine2\nstringValueLine3", Field2: 56}}),
 		zap.Stack("stack"),
 		zap.String("string", "value"),
 		zap.Time("time", time.Now()),
 	)
 
-	log.Named("logger2").With(zap.String("withField3", "value3")).Info("This is info message, error stack should not be printed",
-		zap.String("string2", "value2"), zap.Error(errors.New("this is error")))
+	log.Named("logger2").With(zap.String("withField3", "value3")).
+		Info("This is info message, error stack should not be printed",
+			zap.String("string2", "value2"), zap.Error(errors.New("this is error")))
 
 	log.Named("logger2").Info("This is message",
 		zap.Namespace("namespace1"),
@@ -85,5 +87,6 @@ func TestPrint(t *testing.T) {
 		zap.Object("object3", object2{Field1: "stringValueLine1\nstringValueLine2\nstringValueLine3", Field2: 56}))
 
 	log.Error("This is error without error field, it should contain stack trace")
-	log.Error("This is error with error not containing stack trace so stack trace of log should be printed", zap.Error(stderr.New("error without stack trace")))
+	log.Error("This is error with error not containing stack trace so stack trace of log should be printed",
+		zap.Error(stderr.New("error without stack trace")))
 }
