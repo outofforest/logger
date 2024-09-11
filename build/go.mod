@@ -6,7 +6,7 @@ replace github.com/outofforest/logger => ../
 
 require (
 	github.com/outofforest/build/v2 v2.2.0
-	github.com/outofforest/tools v1.0.2
+	github.com/outofforest/tools v1.0.4
 )
 
 require (
