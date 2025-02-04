@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"reflect"
 	"sort"
 	"strconv"
 	"time"
@@ -30,8 +31,8 @@ const (
 // to the remote loki endpoint.
 //
 // The caller must call the returned cleanup function after using the logger.
-func WithRemote(ctx context.Context, config Config) (context.Context, parallel.Task) {
-	conn := &lokiConn{
+func WithRemote[T comparable](ctx context.Context, config Config[T]) (context.Context, parallel.Task) {
+	conn := &lokiConn[T]{
 		config:   config,
 		buffer:   make(chan interface{}, 1000),
 		lastTime: time.Now().UnixNano(),
@@ -50,15 +51,15 @@ func WithRemote(ctx context.Context, config Config) (context.Context, parallel.T
 	return logger.WithLogger(ctx, log), conn.Run
 }
 
-type lokiConn struct {
-	config   Config
+type lokiConn[T comparable] struct {
+	config   Config[T]
 	buffer   chan interface{}
 	lastTime int64
 	batch    chan []byte
 	syncs    chan chan struct{}
 }
 
-func (lc *lokiConn) Run(ctx context.Context) error {
+func (lc *lokiConn[T]) Run(ctx context.Context) error {
 	for {
 		watcher := time.After(10 * time.Second)
 
@@ -99,7 +100,7 @@ func (lc *lokiConn) Run(ctx context.Context) error {
 	}
 }
 
-func (lc *lokiConn) Write(entry []byte) (int, error) {
+func (lc *lokiConn[T]) Write(entry []byte) (int, error) {
 	// zap uses reusable buffers so data have to be copied before enqueuing
 	data := make([]byte, len(entry))
 	copy(data, entry)
@@ -107,7 +108,7 @@ func (lc *lokiConn) Write(entry []byte) (int, error) {
 	return len(data), lc.enqueue(data)
 }
 
-func (lc *lokiConn) Sync() error {
+func (lc *lokiConn[T]) Sync() error {
 	ch := make(chan struct{})
 	if err := lc.enqueue(ch); err != nil {
 		return err
@@ -124,7 +125,7 @@ func (lc *lokiConn) Sync() error {
 	}
 }
 
-func (lc *lokiConn) enqueue(item interface{}) error {
+func (lc *lokiConn[T]) enqueue(item interface{}) error {
 	select {
 	case lc.buffer <- item:
 	default:
@@ -138,23 +139,26 @@ type logItem struct {
 	Data []byte
 }
 
-type logKey struct {
+type logKey[T comparable] struct {
 	Level  string
 	Logger string
+	Labels T
 }
 
-func (lc *lokiConn) send(ctx context.Context) error {
+func (lc *lokiConn[T]) send(ctx context.Context) error {
 	if len(lc.batch) == 0 {
 		return nil
 	}
 
-	items := map[logKey][]logItem{}
+	items := map[logKey[T]][]logItem{}
 loop:
 	for {
 		select {
 		case rawItem := <-lc.batch:
 			data := map[string]any{}
+			var labels T
 			lo.Must0(json.Unmarshal(rawItem, &data))
+			lo.Must0(json.Unmarshal(rawItem, &labels))
 
 			tsParsed := lo.Must(time.Parse(time.RFC3339Nano, data[logger.EncoderConfig.TimeKey].(string)))
 			ts := tsParsed.UnixNano()
@@ -172,12 +176,18 @@ loop:
 			delete(data, logger.EncoderConfig.LevelKey)
 			delete(data, logger.EncoderConfig.NameKey)
 
-			key := logKey{
+			key := logKey[T]{
 				Level:  level.(string),
 				Logger: name.(string),
+				Labels: labels,
 			}
-			if items[key] == nil {
-				items[key] = []logItem{}
+			labelType := reflect.TypeOf(key.Labels)
+			for i := range labelType.NumField() {
+				k := labelType.Field(i).Tag.Get("json")
+				if k == "" {
+					continue
+				}
+				delete(data, k)
 			}
 
 			items[key] = append(items[key], logItem{
@@ -210,11 +220,25 @@ loop:
 			})
 		}
 
+		stream := map[string]any{}
+		labelValue := reflect.ValueOf(k.Labels)
+		labelType := labelValue.Type()
+		for i := range labelValue.NumField() {
+			k := labelType.Field(i).Tag.Get("json")
+			if k == "" {
+				continue
+			}
+			v := labelValue.Field(i).Interface()
+			if v == nil {
+				continue
+			}
+			stream[k] = v
+		}
+		stream["level"] = k.Level
+		stream["logger"] = k.Logger
+
 		streams = append(streams, map[string]any{
-			"stream": map[string]any{
-				"level":  k.Level,
-				"logger": k.Logger,
-			},
+			"stream": stream,
 			"values": values,
 		})
 	}
