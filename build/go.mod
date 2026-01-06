@@ -1,12 +1,12 @@
 module build
 
-go 1.22.0
+go 1.24
 
 replace github.com/outofforest/logger => ../
 
 require (
 	github.com/outofforest/build/v2 v2.4.0
-	github.com/outofforest/tools v1.2.0
+	github.com/outofforest/tools v1.4.3
 )
 
 require (
