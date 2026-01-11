@@ -81,7 +81,7 @@ func (lc *lokiConn[T]) Run(ctx context.Context) error {
 			}
 		case <-watcher:
 		case <-ctx.Done():
-			return ctx.Err()
+			return errors.WithStack(ctx.Err())
 		}
 
 		if err := lc.send(ctx); err != nil {
