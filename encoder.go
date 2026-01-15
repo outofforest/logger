@@ -176,7 +176,7 @@ func (c *console) AddUintptr(key string, value uintptr) {
 	c.buffer.AppendByte('\n')
 }
 
-func (c *console) AddReflected(key string, value interface{}) error {
+func (c *console) AddReflected(key string, value any) error {
 	c.addKey(key)
 	return c.AppendReflected(value)
 }
@@ -395,7 +395,7 @@ func (c *console) AppendObject(marshaler zapcore.ObjectMarshaler) error {
 	return nil
 }
 
-func (c *console) AppendReflected(value interface{}) error {
+func (c *console) AppendReflected(value any) error {
 	v := reflect.ValueOf(value)
 	switch v.Kind() {
 	case reflect.Invalid:
@@ -435,7 +435,7 @@ func (c *console) AppendReflected(value interface{}) error {
 		}
 	case reflect.Struct:
 		switch v.Type() {
-		case reflect.TypeOf(time.Time{}):
+		case reflect.TypeFor[time.Time]():
 			c.AppendTime(v.Interface().(time.Time))
 		default:
 			c.buffer.AppendByte('\n')
@@ -450,11 +450,7 @@ func (c *console) AppendReflected(value interface{}) error {
 }
 
 func (c *console) indentation() string {
-	var res string
-	for range c.nested {
-		res += "  "
-	}
-	return res
+	return strings.Repeat("  ", c.nested)
 }
 
 func (c *console) addComma() {

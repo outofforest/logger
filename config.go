@@ -46,7 +46,7 @@ var validFormats = map[Format]bool{
 // ConfigureWithCLI configures logger based on CLI flags.
 func ConfigureWithCLI(defaultConfig Config) Config {
 	flags := pflag.NewFlagSet("logger", pflag.ContinueOnError)
-	flags.ParseErrorsWhitelist.UnknownFlags = true
+	flags.ParseErrorsAllowlist.UnknownFlags = true
 	AddFlags(defaultConfig, flags)
 	// Dummy flag to turn off printing usage of this flag set
 	flags.BoolP("help", "h", false, "")
