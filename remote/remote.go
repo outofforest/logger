@@ -34,7 +34,7 @@ const (
 func WithRemote[T comparable](ctx context.Context, config Config[T]) (context.Context, parallel.Task) {
 	conn := &lokiConn[T]{
 		config:   config,
-		buffer:   make(chan interface{}, 1000),
+		buffer:   make(chan any, 1000),
 		lastTime: time.Now().UnixNano(),
 		batch:    make(chan []byte, batchSize),
 		syncs:    make(chan chan struct{}, batchSize),
@@ -53,7 +53,7 @@ func WithRemote[T comparable](ctx context.Context, config Config[T]) (context.Co
 
 type lokiConn[T comparable] struct {
 	config   Config[T]
-	buffer   chan interface{}
+	buffer   chan any
 	lastTime int64
 	batch    chan []byte
 	syncs    chan chan struct{}
@@ -125,7 +125,7 @@ func (lc *lokiConn[T]) Sync() error {
 	}
 }
 
-func (lc *lokiConn[T]) enqueue(item interface{}) error {
+func (lc *lokiConn[T]) enqueue(item any) error {
 	select {
 	case lc.buffer <- item:
 	default:
@@ -161,10 +161,7 @@ loop:
 			lo.Must0(json.Unmarshal(rawItem, &labels))
 
 			tsParsed := lo.Must(time.Parse(time.RFC3339Nano, data[logger.EncoderConfig.TimeKey].(string)))
-			ts := tsParsed.UnixNano()
-			if lc.lastTime > ts {
-				ts = lc.lastTime
-			}
+			ts := max(tsParsed.UnixNano(), lc.lastTime)
 
 			level := data[logger.EncoderConfig.LevelKey]
 			name := data[logger.EncoderConfig.NameKey]
@@ -213,7 +210,6 @@ loop:
 	for k, is := range items {
 		values := make([]any, 0, len(is))
 		for _, item := range is {
-			//nolint:asasalint
 			values = append(values, []any{
 				strconv.FormatInt(item.Time, 10),
 				string(item.Data),
