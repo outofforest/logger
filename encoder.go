@@ -427,7 +427,7 @@ func (c *console) AppendReflected(value any) error {
 			c.buffer.AppendByte('\n')
 			return c.appendReflectedMapping(v)
 		}
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		if v.IsNil() {
 			c.appendNil()
 		} else {
@@ -546,8 +546,7 @@ func (c *console) appendReflectedMapping(v reflect.Value) error {
 func (c *console) appendReflectedStruct(v reflect.Value) error {
 	return c.AppendObject(zapcore.ObjectMarshalerFunc(func(enc zapcore.ObjectEncoder) error {
 		t := v.Type()
-		for i := range t.NumField() {
-			f := t.Field(i)
+		for f := range t.Fields() {
 			if !f.IsExported() {
 				continue
 			}

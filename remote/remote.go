@@ -179,8 +179,8 @@ loop:
 				Labels: labels,
 			}
 			labelType := reflect.TypeOf(key.Labels)
-			for i := range labelType.NumField() {
-				k := labelType.Field(i).Tag.Get("json")
+			for f := range labelType.Fields() {
+				k := f.Tag.Get("json")
 				if k == "" {
 					continue
 				}
